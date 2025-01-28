@@ -71,5 +71,6 @@ python operator.py
 
 - Implement file upload and download functionality.
 - Add better error handling and logging.
+- Add a 'payload' generator for different file formats `(exe, ps1, etc.)`
 
 
